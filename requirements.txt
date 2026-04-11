@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+jupyterlab
+notebook
+matplotlib
+seaborn
+python-dotenv
+sentence-transformers
+faiss-cpu
+rank_bm25==0.2.2
