@@ -1,0 +1,16 @@
+name: dsci-575-project
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - jupyterlab
+  - notebook
+  - pandas
+  - numpy
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - pip:
+      - rank-bm25
+      - sentence-transformers
