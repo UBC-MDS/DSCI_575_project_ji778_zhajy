@@ -8,7 +8,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from src.bm25 import BM25Retriever
 from src.semantic import get_embedding_model, load_semantic_artifacts, semantic_search
 
-
 st.set_page_config(page_title="Movie & TV Retrieval App", page_icon="🎬", layout="wide")
 
 
@@ -101,7 +100,7 @@ if st.button("Search"):
                     st.info("No results found.")
                 else:
                     for doc, score in results:
-                        title = doc.get("product_title", "Untitled")
+                        title = doc.get("product_title") or doc.get("title") or "Untitled"
                         review_text = doc.get("review_text", "")
                         rating = doc.get("rating", "N/A")
                         display_result_card(
@@ -119,9 +118,8 @@ if st.button("Search"):
                     st.info("No results found.")
                 else:
                     for _, row in results.iterrows():
-                        title = row.get("title", "Untitled")
+                        title = row.get("product_title", row.get("title", "Untitled"))
 
-                        # Prefer review text if available, otherwise fall back to retrieval_text
                         review_text = row.get("text", "")
                         if not isinstance(review_text, str) or not review_text.strip():
                             review_text = row.get("retrieval_text", "")
