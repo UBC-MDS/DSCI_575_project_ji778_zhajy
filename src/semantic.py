@@ -15,8 +15,9 @@ def load_documents(
     meta_path: str = "data/processed/meta_sample_processed.csv",
 ) -> pd.DataFrame:
     """
-    Load processed review and metadata documents, combine them into one table,
-    and keep a source label for each document.
+    Load processed reviews and metadata, join them on parent_asin,
+    and build review-level semantic documents with product title,
+    review text, rating, and retrieval text.
     """
     reviews = pd.read_csv(reviews_path)
     meta = pd.read_csv(meta_path)
@@ -24,16 +25,31 @@ def load_documents(
     reviews = reviews.copy()
     meta = meta.copy()
 
-    reviews["source"] = "review"
-    meta["source"] = "metadata"
+    meta_subset = meta[["parent_asin", "title"]].copy()
+    meta_subset = meta_subset.rename(columns={"title": "product_title"})
 
-    reviews["retrieval_text"] = reviews["retrieval_text"].fillna("").astype(str)
-    meta["retrieval_text"] = meta["retrieval_text"].fillna("").astype(str)
+    merged = reviews.merge(meta_subset, on="parent_asin", how="left")
 
-    combined = pd.concat([reviews, meta], ignore_index=True)
-    combined = combined[combined["retrieval_text"].str.strip().str.len() > 0].reset_index(drop=True)
+    merged["product_title"] = merged["product_title"].fillna("Untitled").astype(str)
+    merged["title"] = merged["title"].fillna("").astype(str)   # review title
+    merged["text"] = merged["text"].fillna("").astype(str)
 
-    return combined
+    merged["retrieval_text"] = (
+        merged["product_title"].str.strip() + ". "
+        + merged["title"].str.strip() + ". "
+        + merged["text"].str.strip()
+    )
+
+    merged["retrieval_text"] = (
+        merged["retrieval_text"]
+        .str.replace(r"\s+", " ", regex=True)
+        .str.strip()
+    )
+
+    merged = merged[merged["retrieval_text"].str.len() > 0].reset_index(drop=True)
+    merged["source"] = "review"
+
+    return merged
 
 
 def get_embedding_model(model_name: str = MODEL_NAME) -> SentenceTransformer:
