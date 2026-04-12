@@ -1,0 +1,14 @@
+pandas
+numpy<2.0.0
+scikit-learn
+jupyterlab
+notebook
+matplotlib
+seaborn
+python-dotenv
+sentence-transformers==2.7.0
+transformers<4.40.0
+faiss-cpu
+rank_bm25==0.2.2
+streamlit
+torch==2.2.2

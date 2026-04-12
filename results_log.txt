@@ -1,0 +1,126 @@
+Loading BM25...
+Loading Semantic Search...
+
+==================================================
+QUALITATIVE EVALUATION RESULTS
+==================================================
+
+QUERY: 'Glee season 4 musical comedy'
+------------------------------
+BM25 Results:
+  - [10.14] Spartacus: War of the Damned [Blu-ray]
+  - [6.01] Chitty Chitty Bang Bang
+  - [5.07] Cat Ballou [DVD] [1965] [Region 1] [US Import] [NTSC]
+
+Semantic Results:
+  - [0.4102] Thou Shalt Laugh 4
+  - [0.3230] Sneaky Pete
+  - [0.3116] Horrible Bosses (DVD)
+
+QUERY: 'Taylor Cole Jack Turner chalet wedding'
+------------------------------
+BM25 Results:
+  - [4.38] Kung Fu Panda 2 / Secrets of the Masters (Two-Disc Blu-ray/DVD Combo)
+  - [0.00] Sneaky Pete
+  - [0.00] Creative Galaxy
+
+Semantic Results:
+  - [0.3061] Seven Brides for Seven Brothers (1954) [DVD]
+  - [0.2963] Murphy's Romance / My Best Friend's Wedding / Places in the Heart / Steel Magnolias
+  - [0.2572] French Kiss
+
+QUERY: 'Texas sheriff border corruption movie'
+------------------------------
+BM25 Results:
+  - [4.77] We're the Millers (DVD)
+  - [0.15] Yours, Mine and Ours
+  - [0.14] Iron Man (Single-Disc Edition)
+
+Semantic Results:
+  - [0.3254] We're the Millers (DVD)
+  - [0.3251] Funny Farm
+  - [0.3233] Unforgiven / Outlaw Josey Wales [Blu-ray]
+
+QUERY: 'funny tv series about high school singing competitions'
+------------------------------
+BM25 Results:
+  - [8.23] SOAP - The Complete Series
+  - [7.44] Fruitvale Station
+  - [6.10] Spartacus: Blood and Sand: Season 1 [Blu-ray]
+
+Semantic Results:
+  - [0.4280] My Blueberry Nights (The Miriam Collection)
+  - [0.4240] Sneaky Pete
+  - [0.4239] The Kicks
+
+QUERY: 'romantic movie about a couple trying to plan a small getaway marriage'
+------------------------------
+BM25 Results:
+  - [4.09] Miracle On 34th St bw
+  - [3.87] Crazy, Stupid, Love [Blu-ray]
+  - [3.78] Close Encounters/Starman
+
+Semantic Results:
+  - [0.5181] Murphy's Romance / My Best Friend's Wedding / Places in the Heart / Steel Magnolias
+  - [0.5095] 50 First Dates
+  - [0.4717] Eat Pray Love
+
+QUERY: 'police officer thriller investigating murders and dark secrets'
+------------------------------
+BM25 Results:
+  - [4.73] The Descendants
+  - [3.86] Starman / Jagged Edge (Two-Pack)
+  - [3.11] Marvel's: The Avengers
+
+Semantic Results:
+  - [0.4518] CSI: Crime Scene Investigation - Seasons 1-10
+  - [0.4267] On The Case with Paula Zahn
+  - [0.4187] Columbo: Mystery Movie Collection 1990 [DVD]
+
+QUERY: 'comedy about a guy going to wild parties in Las Vegas to find a girlfriend'
+------------------------------
+BM25 Results:
+  - [5.07] Cat Ballou [DVD] [1965] [Region 1] [US Import] [NTSC]
+  - [5.04] Never Cry Wolf
+  - [3.94] Blue Hawaii
+
+Semantic Results:
+  - [0.4480] 50 First Dates
+  - [0.4256] Benny & Joon
+  - [0.4202] Butch Cassidy and the Sundance Kid
+
+QUERY: 'independent film about mental illness with an ending that lacks closure'
+------------------------------
+BM25 Results:
+  - [10.00] Silver Linings Playbook
+  - [5.84] Still Mine
+  - [4.99] Spartacus: War of the Damned [Blu-ray]
+
+Semantic Results:
+  - [0.4829] Silver Linings Playbook
+  - [0.3902] Temple Grandin (DVD)
+  - [0.3568] Bell, Book and Candle
+
+QUERY: 'family friendly shows that young kids will absolutely love to watch'
+------------------------------
+BM25 Results:
+  - [7.24] It's a Wonderful Life (60th Anniversary Edition)
+  - [7.14] Disney Marsupilami - Jumpin' Jungle Jive
+  - [7.01] Cat Ballou [DVD] [1965] [Region 1] [US Import] [NTSC]
+
+Semantic Results:
+  - [0.5685] Creative Galaxy
+  - [0.5408] SOAP - The Complete Series
+  - [0.5206] The Kicks
+
+QUERY: 'highly rated show that amazon needs to buy and bring back'
+------------------------------
+BM25 Results:
+  - [14.91] Sneaky Pete
+  - [6.20] Cold Comfort Farm
+  - [4.96] Cat Ballou [DVD] [1965] [Region 1] [US Import] [NTSC]
+
+Semantic Results:
+  - [0.5059] Sneaky Pete
+  - [0.4619] SOAP - The Complete Series
+  - [0.4568] Creative Galaxy

@@ -4,13 +4,5 @@ channels:
 dependencies:
   - python=3.11
   - pip
-  - jupyterlab
-  - notebook
-  - pandas
-  - numpy
-  - scikit-learn
-  - matplotlib
-  - seaborn
   - pip:
-      - rank-bm25
-      - sentence-transformers
+      - -r requirements.txt
