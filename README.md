@@ -6,41 +6,38 @@
 
 This project builds a small retrieval system for the Amazon Movies and TV dataset. The goal is to let a user search product-related content using two retrieval methods:
 
-- BM25 search for keyword-based retrieval
-- Semantic search for embedding-based retrieval
+-   BM25 search for keyword-based retrieval
+-   Semantic search for embedding-based retrieval
 
 A simple Streamlit web app is included so users can enter a query, choose a search mode, and view the top results.
 
-For each result, the app displays:
-- product title
-- truncated review text
-- rating
-- retrieval score
+For each result, the app displays: - product title - truncated review text - rating - retrieval score
 
 ## Environment setup
 
 Clone the repository and create the environment with:
 
-```bash
+``` bash
 git clone https://github.com/UBC-MDS/DSCI_575_project_ji778_zhajy.git
 cd DSCI_575_project_ji778_zhajy.git
 conda env create -f environment.yml
 conda activate dsci-575-project
 ```
+
 ## Dataset
 
 This project uses the [Amazon Movies and TV dataset](https://amazon-reviews-2023.github.io/).
 
 Two raw files are required:
 
-- `Movies_and_TV.jsonl.gz`
-- `meta_Movies_and_TV.jsonl.gz`
+-   `Movies_and_TV.jsonl.gz`
+-   `meta_Movies_and_TV.jsonl.gz`
 
 Both files should be placed in data/raw/.
 
 ### Subset used in this project
 
-For reproducibility, this project currently uses a matched 200-row subset. A subset of 200 review records is used, and the metadata records are selected by matching `parent_asin` values rather than being sampled independently. This keeps the review data and metadata aligned and helps avoid mismatched review and product records in the retrieval workflow. 
+For reproducibility, this project currently uses a matched 200-row subset. A subset of 200 review records is used, and the metadata records are selected by matching `parent_asin` values rather than being sampled independently. This keeps the review data and metadata aligned and helps avoid mismatched review and product records in the retrieval workflow.
 
 ## Data processing
 
@@ -52,8 +49,8 @@ The field `parent_asin` is preserved throughout the workflow because it is used 
 
 The notebook `notebooks/milestone1_exploration.ipynb` is used for exploratory analysis on the matched 200-row subset. It also saves the processed sample files to:
 
-- `data/processed/reviews_sample_processed.csv`
-- `data/processed/meta_sample_processed.csv`
+-   `data/processed/reviews_sample_processed.csv`
+-   `data/processed/meta_sample_processed.csv`
 
 ## Retrieval workflows
 
@@ -61,8 +58,8 @@ The notebook `notebooks/milestone1_exploration.ipynb` is used for exploratory an
 
 The BM25 workflow is implemented in `src/bm25.py`. The BM25 tokenizer lowercases text, removes punctuation, removes stopwords, and tokenizes the text before indexing. The BM25 retriever saves the indexed outputs to:
 
-- `data/processed/bm25_index.pkl`
-- `data/processed/corpus_data.pkl`
+-   `data/processed/bm25_index.pkl`
+-   `data/processed/corpus_data.pkl`
 
 Given a query, the BM25 retriever tokenizes the query, computes BM25 scores, and returns ranked results with retrieval scores.
 
@@ -70,8 +67,8 @@ Given a query, the BM25 retriever tokenizes the query, computes BM25 scores, and
 
 The semantic workflow is implemented in `src/semantic.py`. The semantic pipeline loads the processed review and metadata files, aligns review records with metadata using `parent_asin`, and builds semantic documents using product title, review title, and review text. It then generates embeddings using the `sentence-transformers` model `all-MiniLM-L6-v2`, builds the semantic index, and saves the semantic artifacts to:
 
-- `data/processed/semantic_documents.csv`
-- `data/processed/semantic_faiss.index`
+-   `data/processed/semantic_documents.csv`
+-   `data/processed/semantic_faiss.index`
 
 ## Run the app locally
 
@@ -79,6 +76,28 @@ The web app is implemented in `app/app.py`.
 
 To launch the app locally from the project root, run:
 
-```bash
+``` bash
 streamlit run app/app.py
 ```
+
+The repository already includes the processed data and saved retrieval artifacts in `data/processed/`, so no additional preprocessing steps are required to run the app.
+
+If you want to regenerate the retrieval artifacts locally instead of using the files already included in `data/processed/`, first make sure the raw files are placed in `data/raw/`, then run the following steps:
+
+#### Rebuild semantic retrieval artifacts
+
+From the project root, run:
+
+``` bash
+python src/semantic.py 
+```
+
+#### Rebuild BM25 retrieval artifacts
+
+Open Jupyter Lab:
+
+``` bash
+jupyter lab
+```
+
+then run notebooks/build_index.ipynb.
