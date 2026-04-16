@@ -12,3 +12,5 @@ faiss-cpu
 rank_bm25==0.2.2
 streamlit
 torch==2.2.2
+langchain
+langchain-groq
