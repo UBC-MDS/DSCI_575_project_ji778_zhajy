@@ -1,3 +1,5 @@
+import torch
+import torch.nn as nn
 from pathlib import Path
 from typing import Optional
 
@@ -11,8 +13,8 @@ MODEL_NAME = "all-MiniLM-L6-v2"
 
 
 def load_documents(
-    reviews_path: str = "data/processed/reviews_sample_processed.csv",
-    meta_path: str = "data/processed/meta_sample_processed.csv",
+    reviews_path: str = "data/processed/reviews_retrieval_processed.csv",
+    meta_path: str = "data/processed/meta_retrieval_processed.csv",
 ) -> pd.DataFrame:
     """
     Load processed reviews and metadata, join them on parent_asin,
@@ -28,9 +30,8 @@ def load_documents(
     meta_subset = meta[["parent_asin", "title"]].copy()
     meta_subset = meta_subset.rename(columns={"title": "product_title"})
 
-    merged = reviews.merge(meta_subset, on="parent_asin", how="left")
-
-    merged["product_title"] = merged["product_title"].fillna("Untitled").astype(str)
+    merged = reviews.merge(meta_subset, on="parent_asin", how="inner")
+    merged["product_title"] = merged["product_title"].astype(str).str.strip()
     merged["title"] = merged["title"].fillna("").astype(str)   # review title
     merged["text"] = merged["text"].fillna("").astype(str)
 
@@ -101,8 +102,8 @@ def save_semantic_artifacts(
 
 
 def build_and_save_semantic_index(
-    reviews_path: str = "data/processed/reviews_sample_processed.csv",
-    meta_path: str = "data/processed/meta_sample_processed.csv",
+    reviews_path: str = "data/processed/reviews_retrieval_processed.csv",
+    meta_path: str = "data/processed/meta_retrieval_processed.csv",
     index_path: str = "data/processed/semantic_faiss.index",
     docs_path: str = "data/processed/semantic_documents.csv",
     model_name: str = MODEL_NAME,
