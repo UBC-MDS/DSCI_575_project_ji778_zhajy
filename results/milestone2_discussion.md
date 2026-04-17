@@ -32,8 +32,8 @@ We evaluated 5 specific queries originally formulated in Milestone 1 using our H
 | 1. Glee season 4 musical comedy | Y | N | Y |
 | 2. Taylor Cole Jack Turner chalet wedding | Y | N | Y |
 | 3. Texas sheriff border corruption movie | Y | Y | Y |
-| 4. comedy about a guy going to wild parties in Las Vegas... | Y | N | Y |
-| 5. independent film about mental illness with an ending... | Y | Y | Y |
+| 4. comedy about a guy going to wild parties in Las Vegas to find a girlfriend | Y | N | Y |
+| 5. independent film about mental illness with an ending that lacks closure | Y | Y | Y |
 
 ### Summary and Reflections
 
