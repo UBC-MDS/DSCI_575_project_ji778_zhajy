@@ -31,6 +31,18 @@ def retrieve_semantic(query: str, top_k: int = TOP_K) -> pd.DataFrame:
     )
     return results
 
+def build_context(docs_df):
+    context_blocks = []
+    for i, (_, row) in enumerate(docs_df.iterrows(), 1):
+        asin = row.get('parent_asin', 'N/A')
+        title = row.get('product_title', 'Unknown Title')
+        rating = row.get('rating', 'N/A')
+        body = row.get('text', '')
+
+        block = f"[{i}] {title} (ASIN: {asin}) - Rating: {rating}/5\nReview: {body}"
+        context_blocks.append(block)
+    
+    return "\n\n".join(context_blocks)
 
 if __name__ == "__main__":
     query = "romantic comedy movie"
