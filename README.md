@@ -19,7 +19,7 @@ Clone the repository and create the environment with:
 
 ``` bash
 git clone https://github.com/UBC-MDS/DSCI_575_project_ji778_zhajy.git
-cd DSCI_575_project_ji778_zhajy.git
+cd DSCI_575_project_ji778_zhajy
 conda env create -f environment.yml
 conda activate dsci-575-project
 ```
@@ -70,34 +70,81 @@ The semantic workflow is implemented in `src/semantic.py`. The semantic pipeline
 -   `data/processed/semantic_documents.csv`
 -   `data/processed/semantic_faiss.index`
 
+## RAG model choice
+
+The RAG workflow uses Groq with the model `llama-3.1-8b-instant`.
+
+This model was chosen because it avoids the need to download and run a large model locally, which makes the workflow more practical on a laptop. It also makes the generation component easier to test before integrating retrieval and prompt engineering. This choice provides a good balance between response quality and ease of use for a lightweight review-based RAG system.
+
+## Semantic RAG workflow
+
+The semantic RAG workflow is implemented in src/rag_pipeline.py. The pipeline works as follows:
+
+1.  The user enters a query.
+2.  The semantic retriever returns the top-k most relevant review documents using the FAISS index.
+3.  The retrieved documents are converted into a structured context block containing product title, ASIN, rating, and review text.
+4.  A prompt is built from the user query, the retrieved context, and a system prompt.
+5.  The final prompt is sent to the Groq model llama-3.1-8b-instant.
+6.  The model returns a grounded answer based on the retrieved review context.
+
+This workflow is shown in: ![Workflow diagram](img/workflow_diagram.png).
+
+## Hybrid RAG workflow
+
+The hybrid RAG workflow extends the semantic RAG pipeline by replacing the semantic-only retriever with a hybrid retriever implemented in src/hybrid.py.
+
+The hybrid workflow works as follows:
+
+1.  A BM25 retriever returns keyword-based results.
+2.  A semantic retriever returns embedding-based results.
+3.  The two ranked result lists are combined into a hybrid result set.
+4.  Reciprocal Rank Fusion (RRF) is used to merge and rerank the retrieved documents.
+5.  The reranked documents are passed into the same context-building function used by the semantic RAG pipeline.
+6.  A final prompt is built and sent to the Groq model.
+7.  The model generates an answer grounded in the hybrid retrieved context.
+
 ## Run the app locally
 
-The web app is implemented in `app/app.py`.
+To run the app locally, first make sure the raw dataset files ([Amazon Movies and TV dataset](https://amazon-reviews-2023.github.io/).) are downloaded and placed in `data/raw/`.
 
-To launch the app locally from the project root, run:
+Required raw files: `Movies_and_TV.jsonl.gz` `meta_Movies_and_TV.jsonl.gz`
+
+1.  **Add your Groq API key to a local .env file**
+
+The RAG pipeline uses Groq for answer generation, so a local .env file is required.
+
+Create a .env file in the project root with: `GROQ_API_KEY=your_api_key_here`
+
+Do not commit .env to GitHub.
+
+2.  **Prepare the processed retrieval dataset**
+
+``` bash
+python src/prepare_data.py
+```
+
+This generates: reviews_retrieval_processed.csv and meta_retrieval_processed.csv in data/processed folder.
+
+3.  **Build the BM25 artifacts**
+
+    Run:
+
+``` bash
+python src/build_index.py
+```
+
+4.  **Build the semantic artifacts**
+
+    Run:
+
+``` bash
+python src/semantic.py
+```
+
+5.  **Run the Streamlit app**
+
+    Run:
 
 ``` bash
 streamlit run app/app.py
 ```
-
-The repository already includes the processed data and saved retrieval artifacts in `data/processed/`, so no additional preprocessing steps are required to run the app.
-
-If you want to regenerate the retrieval artifacts locally instead of using the files already included in `data/processed/`, first make sure the raw files are placed in `data/raw/`, then run the following steps:
-
-#### Rebuild semantic retrieval artifacts
-
-From the project root, run:
-
-``` bash
-python src/semantic.py 
-```
-
-#### Rebuild BM25 retrieval artifacts
-
-Open Jupyter Lab:
-
-``` bash
-jupyter lab
-```
-
-then run notebooks/build_index.ipynb.
