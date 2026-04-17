@@ -5,7 +5,11 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
 from src.bm25 import BM25Retriever
-from src.rag_pipeline import retrieve_semantic
+from src.semantic import (
+    get_embedding_model,
+    load_semantic_artifacts,
+    semantic_search,
+)
 
 TOP_K = 5
 
@@ -39,41 +43,70 @@ def retrieve_bm25(query: str, top_k: int = TOP_K) -> pd.DataFrame:
 
     return pd.DataFrame(rows)
 
-def hybrid_retriever(query: str, top_k: int = 5, k_rrf: int = 60) -> pd.DataFrame:
+
+def get_semantic_retriever():
+    model = get_embedding_model()
+    index, documents = load_semantic_artifacts()
+    return model, index, documents
+
+
+def retrieve_semantic(query: str, top_k: int = TOP_K) -> pd.DataFrame:
+    model, index, documents = get_semantic_retriever()
+    results = semantic_search(
+        query=query,
+        index=index,
+        documents=documents,
+        model=model,
+        top_k=top_k,
+    )
+    return results
+
+
+def hybrid_retriever(query: str, top_k: int = TOP_K, rrf_k: int = 60) -> pd.DataFrame:
     bm25_df = retrieve_bm25(query, top_k=top_k).copy()
     semantic_df = retrieve_semantic(query, top_k=top_k).copy()
 
-    bm25_df["source"] = "bm25"
-    semantic_df["source"] = "semantic"
+    if "source" not in semantic_df.columns:
+        semantic_df["source"] = "semantic"
 
     bm25_df["bm25_rank"] = range(1, len(bm25_df) + 1)
     semantic_df["semantic_rank"] = range(1, len(semantic_df) + 1)
 
-    bm25_df["dedup_key"] = bm25_df["parent_asin"].astype(str) + "||" + bm25_df["text"].astype(str)
-    semantic_df["dedup_key"] = semantic_df["parent_asin"].astype(str) + "||" + semantic_df["text"].astype(str)
+    bm25_df["dedup_key"] = (
+        bm25_df["parent_asin"].astype(str) + "||" + bm25_df["text"].astype(str)
+    )
+    semantic_df["dedup_key"] = (
+        semantic_df["parent_asin"].astype(str) + "||" + semantic_df["text"].astype(str)
+    )
 
     combined = pd.concat([bm25_df, semantic_df], ignore_index=True)
 
-    agg_rows = []
-    for dedup_key, group in combined.groupby("dedup_key"):
+    fused_rows = []
+    for _, group in combined.groupby("dedup_key", sort=False):
         row = group.iloc[0].copy()
 
-        bm25_rank = group["bm25_rank"].dropna().min() if "bm25_rank" in group else None
-        semantic_rank = group["semantic_rank"].dropna().min() if "semantic_rank" in group else None
+        bm25_rank = group["bm25_rank"].dropna().min() if "bm25_rank" in group.columns else None
+        semantic_rank = group["semantic_rank"].dropna().min() if "semantic_rank" in group.columns else None
 
         rrf_score = 0.0
         if pd.notna(bm25_rank):
-            rrf_score += 1 / (k_rrf + bm25_rank)
+            rrf_score += 1 / (rrf_k + bm25_rank)
         if pd.notna(semantic_rank):
-            rrf_score += 1 / (k_rrf + semantic_rank)
+            rrf_score += 1 / (rrf_k + semantic_rank)
 
-        row["rrf_score"] = rrf_score
-        agg_rows.append(row)
+        sources = group["source"].dropna().unique().tolist()
+        row["source"] = "+".join(sorted(sources))
+        row["score"] = rrf_score
+        fused_rows.append(row)
 
-    reranked = pd.DataFrame(agg_rows).sort_values("rrf_score", ascending=False).head(top_k).reset_index(drop=True)
-    reranked["rank"] = range(1, len(reranked) + 1)
+    fused_df = pd.DataFrame(fused_rows)
+    fused_df = fused_df.sort_values("score", ascending=False).head(top_k).reset_index(drop=True)
+    fused_df["rank"] = range(1, len(fused_df) + 1)
 
-    return reranked
+    cols = ["rank", "score", "product_title", "text", "rating", "parent_asin", "source"]
+    existing_cols = [c for c in cols if c in fused_df.columns]
+
+    return fused_df[existing_cols]
 
 
 if __name__ == "__main__":
