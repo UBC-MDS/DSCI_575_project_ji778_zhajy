@@ -13,6 +13,7 @@ from src.semantic import (
     load_semantic_artifacts,
     semantic_search,
 )
+from src.hybrid import hybrid_retriever
 
 load_dotenv()
 llm = ChatGroq(
@@ -54,19 +55,33 @@ def run_rag_pipeline(query: str, top_k: int = TOP_K, system_prompt=SYSTEM_PROMPT
     
     return answer, results_df
 
+def run_hybrid_rag_pipeline(query: str, top_k: int = TOP_K, system_prompt=SYSTEM_PROMPT_1):
+    results_df = hybrid_retriever(query, top_k=top_k)
+    context_str = build_context(results_df)
+    final_prompt = build_prompt(query, context_str, system_prompt=system_prompt)
+    response = llm.invoke(final_prompt)
+    answer = response.content
+
+    return answer, results_df
+
+
 if __name__ == "__main__":
     test_query = "romantic comedy movie about weddings"
-    
-    print("Testing Pipeline with Groq Llama 3.1...\n")
-    
-    ans1, _ = run_rag_pipeline(test_query, system_prompt=SYSTEM_PROMPT_1)
-    print("\n===== EXPERIMENT 1: The Precise Critic =====")
-    print(ans1)
-    
-    ans2, _ = run_rag_pipeline(test_query, system_prompt=SYSTEM_PROMPT_2)
-    print("\n===== EXPERIMENT 2: The Community Guide =====")
-    print(ans2)
-    
-    ans3, _ = run_rag_pipeline(test_query, system_prompt=SYSTEM_PROMPT_3)
-    print("\n===== EXPERIMENT 3: The Fact-Checker =====")
-    print(ans3)
+
+    print("Testing Semantic RAG Pipeline...\n")
+    semantic_answer, semantic_docs = run_rag_pipeline(
+        test_query, system_prompt=SYSTEM_PROMPT_1
+    )
+    print("\n===== SEMANTIC RAG ANSWER =====")
+    print(semantic_answer)
+    print("\n===== SEMANTIC RETRIEVED DOCS =====")
+    print(semantic_docs[["rank", "product_title", "source"]].head())
+
+    print("\n\nTesting Hybrid RAG Pipeline...\n")
+    hybrid_answer, hybrid_docs = run_hybrid_rag_pipeline(
+        test_query, system_prompt=SYSTEM_PROMPT_1
+    )
+    print("\n===== HYBRID RAG ANSWER =====")
+    print(hybrid_answer)
+    print("\n===== HYBRID RETRIEVED DOCS =====")
+    print(hybrid_docs[["rank", "product_title", "source"]].head())
