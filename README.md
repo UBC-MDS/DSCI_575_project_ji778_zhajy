@@ -117,6 +117,8 @@ Create a .env file in the project root with: `GROQ_API_KEY=your_api_key_here`
 
 Do not commit .env to GitHub.
 
+If you do not already have a Groq API key, please register for one first at [Groq Console Keys](https://console.groq.com/keys).
+
 2.  **Prepare the processed retrieval dataset**
 
 ``` bash
