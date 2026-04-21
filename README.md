@@ -13,17 +13,6 @@ A simple Streamlit web app is included so users can enter a query, choose a sear
 
 For each result, the app displays: - product title - truncated review text - rating - retrieval score
 
-## Environment setup
-
-Clone the repository and create the environment with:
-
-``` bash
-git clone https://github.com/UBC-MDS/DSCI_575_project_ji778_zhajy.git
-cd DSCI_575_project_ji778_zhajy
-conda env create -f environment.yml
-conda activate dsci-575-project
-```
-
 ## Dataset
 
 This project uses the [Amazon Movies and TV dataset](https://amazon-reviews-2023.github.io/).
@@ -37,7 +26,7 @@ Both files should be placed in data/raw/.
 
 ### Subset used in this project
 
-For reproducibility, this project currently uses a matched 200-row subset. A subset of 200 review records is used, and the metadata records are selected by matching `parent_asin` values rather than being sampled independently. This keeps the review data and metadata aligned and helps avoid mismatched review and product records in the retrieval workflow.
+For reproducibility, this project uses a matched subset covering 10,000 review records. The review records are selected first, and the metadata records are then matched using `parent_asin` rather than being sampled independently. This keeps the review data and metadata aligned and helps avoid mismatched review and product records in the retrieval workflow.
 
 ## Data processing
 
@@ -103,6 +92,31 @@ The hybrid workflow works as follows:
 6.  A final prompt is built and sent to the Groq model.
 7.  The model generates an answer grounded in the hybrid retrieved context.
 
+## New features
+
+Compared with the earlier milestone, the project now includes several new features:
+
+-   Semantic RAG pipeline implemented in `src/rag_pipeline.py`
+-   Hybrid RAG workflow implemented with BM25 and semantic retrieval in `src/hybrid.py`
+-   Reciprocal Rank Fusion (RRF) to combine and rerank BM25 and semantic retrieval results
+-   Improved Streamlit app with separate Search and RAG modes
+-   RAG answer panel that displays a grounded generated answer above the retrieved supporting documents
+-   Expandable full review text in the app so the complete review can be viewed when needed
+-   External tool integration added to the pipeline, allowing the system to use web search when retrieved review context is not enough
+
+The tool integration feature is evaluated in `results/final_discussion.md`, where three example queries are shown and the effect of tool usage on the final answers is discussed.
+
+## Environment setup
+
+Clone the repository and create the environment with:
+
+``` bash
+git clone https://github.com/UBC-MDS/DSCI_575_project_ji778_zhajy.git
+cd DSCI_575_project_ji778_zhajy
+conda env create -f environment.yml
+conda activate dsci-575-project
+```
+
 ## Run the app locally
 
 To run the app locally, first make sure the raw dataset files ([Amazon Movies and TV dataset](https://amazon-reviews-2023.github.io/).) are downloaded and placed in `data/raw/`.
@@ -117,6 +131,11 @@ Create a .env file in the project root with: `GROQ_API_KEY=your_api_key_here`
 
 Do not commit .env to GitHub.
 
+``` bash
+touch .env
+
+echo 'GROQ_API_KEY=your_api_key_here' >> .env
+```
 If you do not already have a Groq API key, please register for one first at [Groq Console Keys](https://console.groq.com/keys).
 
 2.  **Prepare the processed retrieval dataset**
@@ -150,3 +169,31 @@ python src/semantic.py
 ``` bash
 streamlit run app/app.py
 ```
+
+## Usage example
+
+After launching the app, you can test the system with queries such as:
+
+-   `romantic comedy movie about weddings`
+
+-   `Glee season 4 musical comedy`
+
+-   `Texas sheriff border corruption movie`
+
+-   `comedy about a guy going to wild parties in Las Vegas to find a girlfriend`
+
+-   `independent film about mental illness with an ending that lacks closure`
+
+In Search mode, users can choose between:
+
+-   BM25 for keyword-based retrieval
+
+-   Semantic for embedding-based retrieval
+
+In RAG mode, users can enter a natural-language query and receive:
+
+-   a generated answer from the Hybrid RAG pipeline
+
+-   retrieved supporting review documents below the answer
+
+-   product title, rating, retrieval score, and source for each retrieved document
