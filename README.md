@@ -148,3 +148,31 @@ python src/semantic.py
 ``` bash
 streamlit run app/app.py
 ```
+
+## Usage example
+
+After launching the app, you can test the system with queries such as:
+
+-   `romantic comedy movie about weddings`
+
+-   `Glee season 4 musical comedy`
+
+-   `Texas sheriff border corruption movie`
+
+-   `comedy about a guy going to wild parties in Las Vegas to find a girlfriend`
+
+-   `independent film about mental illness with an ending that lacks closure`
+
+In Search mode, users can choose between:
+
+-   BM25 for keyword-based retrieval
+
+-   Semantic for embedding-based retrieval
+
+In RAG mode, users can enter a natural-language query and receive:
+
+-   a generated answer from the Hybrid RAG pipeline
+
+-   retrieved supporting review documents below the answer
+
+-   product title, rating, retrieval score, and source for each retrieved document
