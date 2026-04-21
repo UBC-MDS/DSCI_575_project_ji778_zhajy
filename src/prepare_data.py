@@ -1,12 +1,15 @@
 import gzip
 import json
 from pathlib import Path
+from collections import defaultdict
 
 import pandas as pd
 
 REVIEW_PATH = "data/raw/Movies_and_TV.jsonl.gz"
 META_PATH = "data/raw/meta_Movies_and_TV.jsonl.gz"
-N_RETRIEVAL = 2000
+
+TARGET_PRODUCTS = 10000
+MAX_REVIEWS_PER_PRODUCT = 1
 
 
 def build_metadata_lookup(meta_path: str) -> dict:
@@ -33,25 +36,37 @@ def build_metadata_lookup(meta_path: str) -> dict:
     return meta_lookup
 
 
-def collect_matched_reviews(review_path: str, meta_lookup: dict, n: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+def collect_matched_reviews(
+    review_path: str,
+    meta_lookup: dict,
+    target_products: int,
+    max_reviews_per_product: int = 1,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Collect the first n review rows whose parent_asin exists in metadata lookup.
-    Also collect the matching metadata rows.
+    Collect review rows until at least `target_products` unique parent_asin values
+    are included. Optionally limit the number of reviews kept per product.
     """
     matched_reviews = []
     matched_asins = set()
+    review_counts = defaultdict(int)
 
     with gzip.open(review_path, "rt", encoding="utf-8") as f:
         for line in f:
             review = json.loads(line)
             parent_asin = str(review.get("parent_asin", "")).strip()
 
-            if parent_asin in meta_lookup:
-                matched_reviews.append(review)
-                matched_asins.add(parent_asin)
+            if parent_asin not in meta_lookup:
+                continue
 
-                if len(matched_reviews) == n:
-                    break
+            if review_counts[parent_asin] >= max_reviews_per_product:
+                continue
+
+            matched_reviews.append(review)
+            matched_asins.add(parent_asin)
+            review_counts[parent_asin] += 1
+
+            if len(matched_asins) >= target_products:
+                break
 
     matched_meta = [meta_lookup[asin] for asin in matched_asins]
 
@@ -113,10 +128,17 @@ def main():
     meta_lookup = build_metadata_lookup(META_PATH)
     print(f"Metadata records with non-empty title: {len(meta_lookup)}")
 
-    print(f"Collecting first {N_RETRIEVAL} matched review rows...")
-    reviews_raw, meta_raw = collect_matched_reviews(REVIEW_PATH, meta_lookup, N_RETRIEVAL)
+    print(f"Collecting reviews for at least {TARGET_PRODUCTS} unique products...")
+    reviews_raw, meta_raw = collect_matched_reviews(
+        REVIEW_PATH,
+        meta_lookup,
+        target_products=TARGET_PRODUCTS,
+        max_reviews_per_product=MAX_REVIEWS_PER_PRODUCT,
+    )
+
     print(f"Matched reviews shape: {reviews_raw.shape}")
     print(f"Matched metadata shape: {meta_raw.shape}")
+    print(f"Unique products collected: {reviews_raw['parent_asin'].nunique()}")
 
     print("Preprocessing reviews...")
     reviews_processed = preprocess_reviews(reviews_raw)
