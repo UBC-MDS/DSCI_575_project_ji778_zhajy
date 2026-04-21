@@ -14,12 +14,14 @@ from src.semantic import (
     semantic_search,
 )
 from src.hybrid import hybrid_retriever
+from langchain_community.tools import DuckDuckGoSearchRun
 
 load_dotenv()
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=os.getenv("GROQ_API_KEY")
 )
+web_search_tool = DuckDuckGoSearchRun()
 
 TOP_K = 5
 
@@ -64,6 +66,26 @@ def run_hybrid_rag_pipeline(query: str, top_k: int = TOP_K, system_prompt=SYSTEM
 
     return answer, results_df
 
+def run_pipeline_with_tool(query: str, system_prompt):
+    answer, retrieved_docs = run_hybrid_rag_pipeline(query, system_prompt=system_prompt)
+    answer_text = answer.content if hasattr(answer, 'content') else str(answer)
+    failure_phrases = ["cannot find", "more information is needed", "none of the reviews", "not available", "couldn't find"]
+    
+    if any(phrase in answer_text.lower() for phrase in failure_phrases):
+        print(f"\n[Tool Triggered]: Amazon data insufficient for '{query}'. Searching the web...")
+        web_results = web_search_tool.run(query)
+        tool_prompt = (
+            f"You are a helpful assistant. Based on the following live web search data, "
+            f"please answer the user's query.\n\n"
+            f"Web Data: {web_results}\n\n"
+            f"User Query: {query}"
+        )
+        
+        final_answer = llm.invoke(tool_prompt)
+        final_answer_text = final_answer.content if hasattr(final_answer, 'content') else str(final_answer)
+        return final_answer_text, "Web Search Used"
+    
+    return answer_text, "Hybrid RAG Used"
 
 if __name__ == "__main__":
     test_query = "romantic comedy movie about weddings"
