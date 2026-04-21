@@ -1,20 +1,24 @@
 import gzip
 import json
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 import pandas as pd
 
-REVIEW_PATH = "data/raw/Movies_and_TV.jsonl.gz"
-META_PATH = "data/raw/meta_Movies_and_TV.jsonl.gz"
+DATA_DIR = Path("data")
+RAW_DIR = DATA_DIR / "raw"
+PROCESSED_DIR = DATA_DIR / "processed"
+
+REVIEW_PATH = RAW_DIR / "Movies_and_TV.jsonl.gz"
+META_PATH = RAW_DIR / "meta_Movies_and_TV.jsonl.gz"
 
 TARGET_PRODUCTS = 10000
 MAX_REVIEWS_PER_PRODUCT = 1
 
 
-def build_metadata_lookup(meta_path: str) -> dict:
+def build_metadata_lookup(meta_path: str | Path) -> dict:
     """
-    Build a lookup of parent_asin -> metadata record,
+    Build a lookup of parent_asin to metadata record,
     keeping only metadata rows with a non-empty title.
     """
     meta_lookup = {}
@@ -37,7 +41,7 @@ def build_metadata_lookup(meta_path: str) -> dict:
 
 
 def collect_matched_reviews(
-    review_path: str,
+    review_path: str | Path,
     meta_lookup: dict,
     target_products: int,
     max_reviews_per_product: int = 1,
@@ -124,6 +128,7 @@ def preprocess_metadata(meta: pd.DataFrame) -> pd.DataFrame:
 
 
 def main():
+    """Build and save the processed retrieval review and metadata datasets."""
     print("Building metadata lookup...")
     meta_lookup = build_metadata_lookup(META_PATH)
     print(f"Metadata records with non-empty title: {len(meta_lookup)}")
@@ -146,11 +151,10 @@ def main():
     print("Preprocessing metadata...")
     meta_processed = preprocess_metadata(meta_raw)
 
-    out_dir = Path("data/processed")
-    out_dir.mkdir(parents=True, exist_ok=True)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    reviews_out = out_dir / "reviews_retrieval_processed.csv"
-    meta_out = out_dir / "meta_retrieval_processed.csv"
+    reviews_out = PROCESSED_DIR / "reviews_retrieval_processed.csv"
+    meta_out = PROCESSED_DIR / "meta_retrieval_processed.csv"
 
     reviews_processed.to_csv(reviews_out, index=False)
     meta_processed.to_csv(meta_out, index=False)

@@ -1,20 +1,26 @@
 import torch
 import torch.nn as nn
 from pathlib import Path
-from typing import Optional
 
 import faiss
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 
-
 MODEL_NAME = "all-MiniLM-L6-v2"
+
+DATA_DIR = Path("data")
+PROCESSED_DIR = DATA_DIR / "processed"
+
+REVIEWS_PATH = PROCESSED_DIR / "reviews_retrieval_processed.csv"
+META_PATH = PROCESSED_DIR / "meta_retrieval_processed.csv"
+SEMANTIC_INDEX_PATH = PROCESSED_DIR / "semantic_faiss.index"
+SEMANTIC_DOCS_PATH = PROCESSED_DIR / "semantic_documents.csv"
 
 
 def load_documents(
-    reviews_path: str = "data/processed/reviews_retrieval_processed.csv",
-    meta_path: str = "data/processed/meta_retrieval_processed.csv",
+    reviews_path: str | Path = REVIEWS_PATH,
+    meta_path: str | Path = META_PATH,
 ) -> pd.DataFrame:
     """
     Load processed reviews and metadata, join them on parent_asin,
@@ -32,23 +38,17 @@ def load_documents(
 
     merged = reviews.merge(meta_subset, on="parent_asin", how="inner")
     merged["product_title"] = merged["product_title"].astype(str).str.strip()
-    merged["title"] = merged["title"].fillna("").astype(str)   # review title
-    merged["text"] = merged["text"].fillna("").astype(str)
+    merged["title"] = merged["title"].fillna("").astype(str).str.strip()
+    merged["text"] = merged["text"].fillna("").astype(str).str.strip()
 
     merged["retrieval_text"] = (
-        merged["product_title"].str.strip() + ". "
-        + merged["title"].str.strip() + ". "
-        + merged["text"].str.strip()
-    )
-
-    merged["retrieval_text"] = (
-        merged["retrieval_text"]
-        .str.replace(r"\s+", " ", regex=True)
-        .str.strip()
-    )
+        merged["product_title"] + ". "
+        + merged["title"] + ". "
+        + merged["text"]
+    ).str.replace(r"\s+", " ", regex=True).str.strip()
 
     merged = merged[merged["retrieval_text"].str.len() > 0].reset_index(drop=True)
-    merged["source"] = "review"
+    merged["source"] = "semantic"
 
     return merged
 
@@ -92,43 +92,48 @@ def build_faiss_index(embeddings: np.ndarray) -> faiss.Index:
 def save_semantic_artifacts(
     index: faiss.Index,
     documents: pd.DataFrame,
-    index_path: str = "data/processed/semantic_faiss.index",
-    docs_path: str = "data/processed/semantic_documents.csv",
+    index_path: str | Path = SEMANTIC_INDEX_PATH,
+    docs_path: str | Path = SEMANTIC_DOCS_PATH,
 ) -> None:
     """Save the FAISS index and aligned document table."""
-    Path(index_path).parent.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(index, index_path)
+    index_path = Path(index_path)
+    docs_path = Path(docs_path)
+
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    faiss.write_index(index, str(index_path))
     documents.to_csv(docs_path, index=False)
 
 
 def build_and_save_semantic_index(
-    reviews_path: str = "data/processed/reviews_retrieval_processed.csv",
-    meta_path: str = "data/processed/meta_retrieval_processed.csv",
-    index_path: str = "data/processed/semantic_faiss.index",
-    docs_path: str = "data/processed/semantic_documents.csv",
+    reviews_path: str | Path = REVIEWS_PATH,
+    meta_path: str | Path = META_PATH,
+    index_path: str | Path = SEMANTIC_INDEX_PATH,
+    docs_path: str | Path = SEMANTIC_DOCS_PATH,
     model_name: str = MODEL_NAME,
 ) -> tuple[faiss.Index, pd.DataFrame]:
     """
-    Full pipeline:
-    - load processed reviews + metadata
-    - embed documents
-    - build FAISS index
-    - save artifacts
+    Load processed reviews and metadata, build embeddings,
+    construct a FAISS index, and save the semantic artifacts.
     """
     documents = load_documents(reviews_path=reviews_path, meta_path=meta_path)
     model = get_embedding_model(model_name=model_name)
     embeddings = encode_documents(documents, model=model)
     index = build_faiss_index(embeddings)
-    save_semantic_artifacts(index=index, documents=documents, index_path=index_path, docs_path=docs_path)
+    save_semantic_artifacts(
+        index=index,
+        documents=documents,
+        index_path=index_path,
+        docs_path=docs_path,
+    )
     return index, documents
 
 
 def load_semantic_artifacts(
-    index_path: str = "data/processed/semantic_faiss.index",
-    docs_path: str = "data/processed/semantic_documents.csv",
+    index_path: str | Path = SEMANTIC_INDEX_PATH,
+    docs_path: str | Path = SEMANTIC_DOCS_PATH,
 ) -> tuple[faiss.Index, pd.DataFrame]:
     """Load a saved FAISS index and aligned document table."""
-    index = faiss.read_index(index_path)
+    index = faiss.read_index(str(index_path))
     documents = pd.read_csv(docs_path)
     return index, documents
 

@@ -1,21 +1,26 @@
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import pandas as pd
 from src.bm25 import BM25Retriever
 
-REVIEWS_PATH = "data/processed/reviews_retrieval_processed.csv"
-META_PATH = "data/processed/meta_retrieval_processed.csv"
-INDEX_PATH = "data/processed/bm25_index.pkl"
-CORPUS_PATH = "data/processed/corpus_data.pkl"
+DATA_DIR = Path("data")
+PROCESSED_DIR = DATA_DIR / "processed"
+
+REVIEWS_PATH = PROCESSED_DIR / "reviews_retrieval_processed.csv"
+META_PATH = PROCESSED_DIR / "meta_retrieval_processed.csv"
+INDEX_PATH = PROCESSED_DIR / "bm25_index.pkl"
+CORPUS_PATH = PROCESSED_DIR / "corpus_data.pkl"
 
 
 def build_corpus_metadata(
-    reviews_path: str = REVIEWS_PATH,
-    meta_path: str = META_PATH,
+    reviews_path: str | Path = REVIEWS_PATH,
+    meta_path: str | Path = META_PATH,
 ) -> list[dict]:
+    """Build BM25 corpus metadata from processed reviews and metadata files."""
     reviews = pd.read_csv(reviews_path)
     meta = pd.read_csv(meta_path)
 
@@ -28,7 +33,7 @@ def build_corpus_metadata(
     merged = reviews.merge(meta_subset, on="parent_asin", how="inner")
 
     merged["product_title"] = merged["product_title"].fillna("").astype(str).str.strip()
-    merged["title"] = merged["title"].fillna("").astype(str).str.strip()   # review title
+    merged["title"] = merged["title"].fillna("").astype(str).str.strip()
     merged["text"] = merged["text"].fillna("").astype(str).str.strip()
 
     merged["retrieval_text"] = (
@@ -57,7 +62,8 @@ def build_corpus_metadata(
     return corpus_metadata
 
 
-def main():
+def main() -> None:
+    """Build and save the BM25 index and corpus metadata artifacts."""
     corpus_metadata = build_corpus_metadata()
 
     print(f"Number of BM25 documents: {len(corpus_metadata)}")
@@ -65,8 +71,8 @@ def main():
         print("Example keys:", corpus_metadata[0].keys())
 
     bm25 = BM25Retriever(
-        index_path=INDEX_PATH,
-        corpus_path=CORPUS_PATH,
+        index_path=str(INDEX_PATH),
+        corpus_path=str(CORPUS_PATH),
     )
     bm25.build_and_save_index(corpus_metadata)
 
