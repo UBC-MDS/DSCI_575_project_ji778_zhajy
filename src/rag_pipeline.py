@@ -1,61 +1,87 @@
-import sys
 import os
+import sys
 from pathlib import Path
+
+import pandas as pd
 from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import pandas as pd
-from langchain_groq import ChatGroq
-from src.prompts import build_prompt, SYSTEM_PROMPT_1, SYSTEM_PROMPT_2, SYSTEM_PROMPT_3
-from src.semantic import (
-    get_embedding_model,
-    load_semantic_artifacts,
-    semantic_search,
-)
 from src.hybrid import hybrid_retriever
+from src.prompts import SYSTEM_PROMPT_1, SYSTEM_PROMPT_2, SYSTEM_PROMPT_3, build_prompt
+from src.semantic import get_embedding_model, load_semantic_artifacts, semantic_search
 
-load_dotenv()
-llm = ChatGroq(
-    model="llama-3.1-8b-instant",
-    api_key=os.getenv("GROQ_API_KEY")
-)
-
+GROQ_MODEL_NAME = "llama-3.1-8b-instant"
 TOP_K = 5
+TEST_QUERY = "romantic comedy movie about weddings"
 
-def get_semantic_retriever():
+
+def load_llm() -> ChatGroq:
+    """Load and return the Groq LLM used in the RAG pipeline."""
+    load_dotenv()
+    return ChatGroq(
+        model=GROQ_MODEL_NAME,
+        api_key=os.getenv("GROQ_API_KEY"),
+    )
+
+
+def get_semantic_retriever() -> tuple:
+    """Load and return the semantic retriever components."""
     model = get_embedding_model()
     index, documents = load_semantic_artifacts()
     return model, index, documents
 
+
 def retrieve_semantic(query: str, top_k: int = TOP_K) -> pd.DataFrame:
+    """Retrieve the top-k semantic search results for a query."""
     model, index, documents = get_semantic_retriever()
     results = semantic_search(
-        query=query, index=index, documents=documents, model=model, top_k=top_k,
+        query=query,
+        index=index,
+        documents=documents,
+        model=model,
+        top_k=top_k,
     )
     return results
 
-def build_context(docs_df):
+
+def build_context(docs_df: pd.DataFrame) -> str:
+    """Format retrieved documents into a context block for the LLM."""
     context_blocks = []
     for i, (_, row) in enumerate(docs_df.iterrows(), 1):
-        asin = row.get('parent_asin', 'N/A')
-        title = row.get('product_title', 'Unknown Title')
-        rating = row.get('rating', 'N/A')
-        body = row.get('text', '')
+        asin = row.get("parent_asin", "N/A")
+        title = row.get("product_title", "Unknown Title")
+        rating = row.get("rating", "N/A")
+        body = row.get("text", "")
         block = f"[{i}] {title} (ASIN: {asin}) - Rating: {rating}/5\nReview: {body}"
         context_blocks.append(block)
     return "\n\n".join(context_blocks)
 
-def run_rag_pipeline(query: str, top_k: int = TOP_K, system_prompt=SYSTEM_PROMPT_1):
+
+def run_rag_pipeline(
+    query: str,
+    top_k: int = TOP_K,
+    system_prompt: str = SYSTEM_PROMPT_1,
+) -> tuple[str, pd.DataFrame]:
+    """Run the semantic RAG pipeline and return the answer with retrieved documents."""
+    llm = load_llm()
     results_df = retrieve_semantic(query, top_k=top_k)
     context_str = build_context(results_df)
     final_prompt = build_prompt(query, context_str, system_prompt=system_prompt)
     response = llm.invoke(final_prompt)
-    answer = response.content 
-    
+    answer = response.content
+
     return answer, results_df
 
-def run_hybrid_rag_pipeline(query: str, top_k: int = TOP_K, system_prompt=SYSTEM_PROMPT_1):
+
+def run_hybrid_rag_pipeline(
+    query: str,
+    top_k: int = TOP_K,
+    system_prompt: str = SYSTEM_PROMPT_1,
+) -> tuple[str, pd.DataFrame]:
+    """Run the hybrid RAG pipeline and return the answer with retrieved documents."""
+    llm = load_llm()
     results_df = hybrid_retriever(query, top_k=top_k)
     context_str = build_context(results_df)
     final_prompt = build_prompt(query, context_str, system_prompt=system_prompt)
@@ -65,12 +91,12 @@ def run_hybrid_rag_pipeline(query: str, top_k: int = TOP_K, system_prompt=SYSTEM
     return answer, results_df
 
 
-if __name__ == "__main__":
-    test_query = "romantic comedy movie about weddings"
-
+def main() -> None:
+    """Run a simple test for the semantic and hybrid RAG pipelines."""
     print("Testing Semantic RAG Pipeline...\n")
     semantic_answer, semantic_docs = run_rag_pipeline(
-        test_query, system_prompt=SYSTEM_PROMPT_1
+        TEST_QUERY,
+        system_prompt=SYSTEM_PROMPT_1,
     )
     print("\n===== SEMANTIC RAG ANSWER =====")
     print(semantic_answer)
@@ -79,9 +105,14 @@ if __name__ == "__main__":
 
     print("\n\nTesting Hybrid RAG Pipeline...\n")
     hybrid_answer, hybrid_docs = run_hybrid_rag_pipeline(
-        test_query, system_prompt=SYSTEM_PROMPT_1
+        TEST_QUERY,
+        system_prompt=SYSTEM_PROMPT_1,
     )
     print("\n===== HYBRID RAG ANSWER =====")
     print(hybrid_answer)
     print("\n===== HYBRID RETRIEVED DOCS =====")
     print(hybrid_docs[["rank", "product_title", "source"]].head())
+
+
+if __name__ == "__main__":
+    main()

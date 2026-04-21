@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-import pandas as pd
 from src.bm25 import BM25Retriever
 from src.semantic import (
     get_embedding_model,
@@ -11,19 +12,29 @@ from src.semantic import (
     semantic_search,
 )
 
+DATA_DIR = Path("data")
+PROCESSED_DIR = DATA_DIR / "processed"
+
+BM25_INDEX_PATH = PROCESSED_DIR / "bm25_index.pkl"
+BM25_CORPUS_PATH = PROCESSED_DIR / "corpus_data.pkl"
+
 TOP_K = 5
+RRF_K = 60
+TEST_QUERY = "romantic comedy movie about weddings"
 
 
-def get_bm25_retriever():
+def get_bm25_retriever() -> BM25Retriever:
+    """Load and return the BM25 retriever with saved artifacts."""
     bm25 = BM25Retriever(
-        index_path="data/processed/bm25_index.pkl",
-        corpus_path="data/processed/corpus_data.pkl",
+        index_path=str(BM25_INDEX_PATH),
+        corpus_path=str(BM25_CORPUS_PATH),
     )
     bm25.load_index()
     return bm25
 
 
 def retrieve_bm25(query: str, top_k: int = TOP_K) -> pd.DataFrame:
+    """Retrieve the top-k BM25 results for a query as a DataFrame."""
     bm25 = get_bm25_retriever()
     results = bm25.search(query, top_n=top_k)
 
@@ -44,13 +55,15 @@ def retrieve_bm25(query: str, top_k: int = TOP_K) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def get_semantic_retriever():
+def get_semantic_retriever() -> tuple:
+    """Load and return the semantic retriever components."""
     model = get_embedding_model()
     index, documents = load_semantic_artifacts()
     return model, index, documents
 
 
 def retrieve_semantic(query: str, top_k: int = TOP_K) -> pd.DataFrame:
+    """Retrieve the top-k semantic results for a query as a DataFrame."""
     model, index, documents = get_semantic_retriever()
     results = semantic_search(
         query=query,
@@ -62,7 +75,12 @@ def retrieve_semantic(query: str, top_k: int = TOP_K) -> pd.DataFrame:
     return results
 
 
-def hybrid_retriever(query: str, top_k: int = TOP_K, rrf_k: int = 60) -> pd.DataFrame:
+def hybrid_retriever(
+    query: str,
+    top_k: int = TOP_K,
+    rrf_k: int = RRF_K,
+) -> pd.DataFrame:
+    """Combine BM25 and semantic results using Reciprocal Rank Fusion."""
     bm25_df = retrieve_bm25(query, top_k=top_k).copy()
     semantic_df = retrieve_semantic(query, top_k=top_k).copy()
 
@@ -85,8 +103,8 @@ def hybrid_retriever(query: str, top_k: int = TOP_K, rrf_k: int = 60) -> pd.Data
     for _, group in combined.groupby("dedup_key", sort=False):
         row = group.iloc[0].copy()
 
-        bm25_rank = group["bm25_rank"].dropna().min() if "bm25_rank" in group.columns else None
-        semantic_rank = group["semantic_rank"].dropna().min() if "semantic_rank" in group.columns else None
+        bm25_rank = group["bm25_rank"].dropna().min()
+        semantic_rank = group["semantic_rank"].dropna().min()
 
         rrf_score = 0.0
         if pd.notna(bm25_rank):
@@ -109,14 +127,17 @@ def hybrid_retriever(query: str, top_k: int = TOP_K, rrf_k: int = 60) -> pd.Data
     return fused_df[existing_cols]
 
 
-if __name__ == "__main__":
-    query = "romantic comedy movie about weddings"
-
+def main() -> None:
+    """Run a simple test of BM25, semantic, and hybrid retrieval."""
     print("===== BM25 =====")
-    print(retrieve_bm25(query, top_k=5)[["rank", "score", "product_title", "text"]].head())
+    print(retrieve_bm25(TEST_QUERY, top_k=5)[["rank", "score", "product_title", "text"]].head())
 
     print("\n===== SEMANTIC =====")
-    print(retrieve_semantic(query, top_k=5)[["rank", "score", "product_title", "text"]].head())
+    print(retrieve_semantic(TEST_QUERY, top_k=5)[["rank", "score", "product_title", "text"]].head())
 
     print("\n===== HYBRID =====")
-    print(hybrid_retriever(query, top_k=5)[["rank", "score", "product_title", "text", "source"]].head())
+    print(hybrid_retriever(TEST_QUERY, top_k=5)[["rank", "score", "product_title", "text", "source"]].head())
+
+
+if __name__ == "__main__":
+    main()
