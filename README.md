@@ -136,6 +136,7 @@ touch .env
 
 echo 'GROQ_API_KEY=your_api_key_here' >> .env
 ```
+If you do not already have a Groq API key, please register for one first at [Groq Console Keys](https://console.groq.com/keys).
 
 2.  **Prepare the processed retrieval dataset**
 
