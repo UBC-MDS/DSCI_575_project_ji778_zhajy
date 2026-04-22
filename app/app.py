@@ -1,26 +1,37 @@
 import torch
 import torch.nn as nn
-import streamlit as st
-import pandas as pd
-import sys
-import re
 import html
+import re
+import sys
 from pathlib import Path
+
+import pandas as pd
+import streamlit as st
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from src.bm25 import BM25Retriever
+from src.prompts import SYSTEM_PROMPT_1
+from src.rag_pipeline import run_pipeline_with_tool
 from src.semantic import get_embedding_model, load_semantic_artifacts, semantic_search
-from src.rag_pipeline import run_hybrid_rag_pipeline
+
+DATA_DIR = Path("data")
+PROCESSED_DIR = DATA_DIR / "processed"
+
+BM25_INDEX_PATH = PROCESSED_DIR / "bm25_index.pkl"
+BM25_CORPUS_PATH = PROCESSED_DIR / "corpus_data.pkl"
+SEMANTIC_INDEX_PATH = PROCESSED_DIR / "semantic_faiss.index"
+SEMANTIC_DOCS_PATH = PROCESSED_DIR / "semantic_documents.csv"
 
 st.set_page_config(page_title="Movie & TV Retrieval App", page_icon="🎬", layout="wide")
 
 
 @st.cache_resource
-def load_bm25():
+def load_bm25() -> BM25Retriever:
+    """Load and cache the BM25 retriever."""
     retriever = BM25Retriever(
-        index_path="data/processed/bm25_index.pkl",
-        corpus_path="data/processed/corpus_data.pkl",
+        index_path=str(BM25_INDEX_PATH),
+        corpus_path=str(BM25_CORPUS_PATH),
     )
     retriever.load_index()
     return retriever
@@ -28,15 +39,17 @@ def load_bm25():
 
 @st.cache_resource
 def load_semantic():
+    """Load and cache the semantic model, index, and documents."""
     model = get_embedding_model()
     index, documents = load_semantic_artifacts(
-        index_path="data/processed/semantic_faiss.index",
-        docs_path="data/processed/semantic_documents.csv",
+        index_path=str(SEMANTIC_INDEX_PATH),
+        docs_path=str(SEMANTIC_DOCS_PATH),
     )
     return model, index, documents
 
 
-def format_rating(rating):
+def format_rating(rating) -> str:
+    """Format numeric ratings as stars plus the numeric value."""
     if pd.isna(rating):
         return "N/A"
     try:
@@ -47,26 +60,35 @@ def format_rating(rating):
         return str(rating)
 
 
-def clean_review_text(text):
+def clean_review_text(text: str) -> str:
+    """Clean HTML tags and whitespace from review text."""
     if not isinstance(text, str):
         return "N/A"
 
-    text = html.unescape(text) 
+    text = html.unescape(text)
     text = re.sub(r"<br\s*/?>", "\n", text)
-    text = re.sub(r"<[^>]+>", "", text) 
+    text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\n\s*\n+", "\n\n", text)
     text = re.sub(r"[ \t]+", " ", text)
     return text.strip()
 
 
-def truncate_text(text, max_chars=200):
+def truncate_text(text: str, max_chars: int = 200) -> str:
+    """Return a shortened preview of review text."""
     text = clean_review_text(text)
     if len(text) <= max_chars:
         return text
     return text[:max_chars].rstrip() + "..."
 
 
-def display_result_card(title, review_text, rating, score=None, source=None):
+def display_result_card(
+    title: str,
+    review_text: str,
+    rating,
+    score=None,
+    source: str | None = None,
+) -> None:
+    """Display one retrieval result card in the app."""
     cleaned_review = clean_review_text(review_text)
 
     st.markdown(f"### {title if title else 'Untitled'}")
@@ -90,22 +112,22 @@ def display_result_card(title, review_text, rating, score=None, source=None):
     st.markdown("---")
 
 
-def run_bm25_search(query, top_k=3):
+def run_bm25_search(query: str, top_k: int = 3):
+    """Run BM25 search for a query."""
     bm25 = load_bm25()
-    results = bm25.search(query, top_n=top_k)
-    return results
+    return bm25.search(query, top_n=top_k)
 
 
-def run_semantic_search(query, top_k=3):
+def run_semantic_search(query: str, top_k: int = 3) -> pd.DataFrame:
+    """Run semantic search for a query."""
     model, index, documents = load_semantic()
-    results = semantic_search(
+    return semantic_search(
         query=query,
         index=index,
         documents=documents,
         model=model,
         top_k=top_k,
     )
-    return results
 
 
 st.title("Movie & TV Retrieval App")
@@ -136,6 +158,7 @@ with search_tab:
                             title = doc.get("product_title") or doc.get("title") or "Untitled"
                             review_text = doc.get("review_text", "")
                             rating = doc.get("rating", "N/A")
+
                             display_result_card(
                                 title=title,
                                 review_text=review_text,
@@ -176,10 +199,14 @@ with rag_tab:
             st.warning("Please enter a query.")
         else:
             with st.spinner("Generating answer..."):
-                answer, docs = run_hybrid_rag_pipeline(rag_query)
+                answer, docs, mode = run_pipeline_with_tool(
+                    rag_query,
+                    system_prompt=SYSTEM_PROMPT_1,
+                )
 
                 st.markdown("## RAG Answer")
                 st.write(answer)
+                st.caption(mode)
 
                 st.markdown("## Retrieved Supporting Documents")
                 if docs is None or docs.empty:
