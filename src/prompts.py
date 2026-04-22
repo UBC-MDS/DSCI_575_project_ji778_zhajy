@@ -1,19 +1,21 @@
 """
 Prompt templates for Movie & TV RAG.
-Refined for Milestone 2 Qualitative Evaluation (Accuracy, Completeness, Fluency).
+Refined for qualitative evaluation of accuracy, completeness, and fluency.
 """
 
-def build_context(docs_df):
+import pandas as pd
+
+
+def build_context(docs_df: pd.DataFrame) -> str:
     """
-    Formats retrieved documents into a structured block.
-    Matches the columns in meta_retrieval_processed and reviews_retrieval_processed.
+    Format retrieved documents into a structured context block for prompting.
     """
     context_parts = []
     for i, (_, row) in enumerate(docs_df.iterrows(), 1):
-        asin = row.get('parent_asin', 'N/A')
-        title = row.get('product_title', 'Unknown Title')
-        rating = row.get('rating', 'N/A')
-        review_body = row.get('text', 'No review text available.')
+        asin = row.get("parent_asin", "N/A")
+        title = row.get("product_title", "Unknown Title")
+        rating = row.get("rating", "N/A")
+        review_body = row.get("text", "No review text available.")
 
         block = (
             f"--- Entry {i} ---\n"
@@ -23,8 +25,9 @@ def build_context(docs_df):
             f"Review: {review_body}\n"
         )
         context_parts.append(block)
-    
+
     return "\n".join(context_parts)
+
 
 SYSTEM_PROMPT_1 = (
     "You are a Movie and TV recommendation expert. "
@@ -47,9 +50,14 @@ SYSTEM_PROMPT_3 = (
     "differentiate them by their unique ASIN and product title."
 )
 
-def build_prompt(query, context, system_prompt=SYSTEM_PROMPT_1):
+
+def build_prompt(
+    query: str,
+    context: str,
+    system_prompt: str = SYSTEM_PROMPT_1,
+) -> str:
     """
-    Combines system prompt, context, and query for the LLM [cite: 120-125].
+    Combine the system prompt, retrieved context, and user query into a final prompt.
     """
     return (
         f"{system_prompt}\n\n"
